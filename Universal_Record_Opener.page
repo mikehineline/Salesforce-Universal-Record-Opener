@@ -5,7 +5,7 @@
 <script type="text/javascript">
 /*
 	Universal Record Opener for Salesforce
-	Version: 6.1
+	Version: 6.2
 	Author: Mike Hineline
 
 	Copyright (c) 2013, salesforce.com, Inc.
@@ -43,21 +43,21 @@
         // Detect the page format
         var pageFormat = "aloha";
         if((typeof sforce != 'undefined') && (sforce != null)) {
-    	    // If sforce is defined, the page is in the Salesforce Console or Salesforce1 mobile app
-    	    if (sforce.console.isInConsole()) {
-    	        // In Salesforce Console
-                pageFormat = "console";
-            } else {
-                // In Salesforce1 mobile app
-                pageFormat = "mobile";
-            }
-    	} else {
-    		// Default to aloha
-            pageFormat = "aloha";
-    	}
+    	   // If sforce is defined, the page is in the Salesforce Console or Salesforce1 mobile app
+    	   if (sforce.console.isInConsole()) {
+    	       // In Salesforce Console
+            pageFormat = "console";
+        } else if ((typeof sforce.one != 'undefined') && (sforce.one != null)) {
+            // In Salesforce1 mobile app
+            pageFormat = "mobile";
+        }
+    } else {
+        // Default to aloha
+        pageFormat = "aloha";
+    }
         // Return the page format
         return pageFormat;
-    } 
+    }
 
     /*
         openSubtab - open a new subtab in the Salesforce console as a subtab of the enclosing primary tab
@@ -185,3 +185,4 @@ Create a <b>new</b> task.  If the user is viewing from the console, open it in a
 <br />
 
 </apex:page>
+
