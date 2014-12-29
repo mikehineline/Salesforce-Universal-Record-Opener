@@ -1,11 +1,11 @@
-apex:page >
+<apex:page >
 
-<apex:includeScript value="/support/console/30.0/integration.js"/>
+<apex:includeScript value="/support/console/32.0/integration.js"/>
 
 <script type="text/javascript">
 /*
 	Universal Record Opener for Salesforce
-	Version: 6.0
+	Version: 6.1
 	Author: Mike Hineline
 
 	Copyright (c) 2013, salesforce.com, Inc.
@@ -33,138 +33,135 @@ apex:page >
 	LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
 	OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
 	OF THE POSSIBILITY OF SUCH DAMAGE.
-
 */
-	/* 
-		getPageFormat - get the pageFormat string based on the user's UI
-			NOTE: Include this JavaScript function in the VF page file (as opposed to a Static Resource)
-			due to the inline Visualforce merge field
-		Inputs: none
-		Output: String pageFormat = console, mobile, or aloha
-	*/
-	function getPageFormat() {
-		// Detect the page format
-		var pageisdtp = encodeURI("{!JSENCODE($CurrentPage.parameters.isdtp)}");
-		var pageFormat = "aloha";
-		if (pageisdtp == 'nv' || pageisdtp == 'vw') {
-			// Detect the console
-			pageFormat = "console";
-		} else if ( pageisdtp == 'p1' ) {
-			// Detect Salesforce1
-			pageFormat = "mobile";
-		} else {
-			// Default to aloha
-			pageFormat = "aloha";
-		}
-		
-		// Return the page format
-		return pageFormat;
-	} 
+    /* 
+        getPageFormat - get the pageFormat string based on the user's UI
+        Inputs: none
+        Output: String pageFormat = console, mobile, or aloha
+    */
+    function getPageFormat() {
+        // Detect the page format
+        var pageFormat = "aloha";
+        if((typeof sforce != 'undefined') && (sforce != null)) {
+    	    // If sforce is defined, the page is in the Salesforce Console or Salesforce1 mobile app
+    	    if (sforce.console.isInConsole()) {
+    	        // In Salesforce Console
+                pageFormat = "console";
+            } else {
+                // In Salesforce1 mobile app
+                pageFormat = "mobile";
+            }
+    	} else {
+    		// Default to aloha
+            pageFormat = "aloha";
+    	}
+        // Return the page format
+        return pageFormat;
+    } 
 
-	/*
-		openSubtab - open a new subtab in the Salesforce console as a subtab of the enclosing primary tab
-				This is only valid for pages which are in sidebar components of a record.  Web-tabs, for example, aren't enclosed by a primary tab
-		Inputs:
-			- String url - URL to open in the subtab
-			- String tabTitle - title of the console subtab
-		Returns: none
-	*/
-	function openSubtab(url,tabTitle) {
-		var openSubtabFunction = function openSubtabFunction(result) {
-			// Open a new subtab with primaryTabId=result.id, url=url,active=true,tabLabel=tabTitle,id=null (create new subtab),callback=N/A,name=N/A
-			sforce.console.openSubtab(result.id,url,true,tabTitle,null);
-		}
-		sforce.console.getEnclosingPrimaryTabId(openSubtabFunction);
-	}
+    /*
+        openSubtab - open a new subtab in the Salesforce console as a subtab of the enclosing primary tab
+        Inputs:
+            - String url - URL to open in the subtab
+            - String tabTitle - title of the console subtab
+        Returns: none
+    */
+    function openSubtab(url,tabTitle) {
+        var openSubtabFunction = function openSubtabFunction(result) {
+            // Open a new subtab with primaryTabId=result.id, url=url,active=true,tabLabel=tabTitle,id=null (create new subtab),callback=N/A,name=N/A
+            sforce.console.openSubtab(result.id,url,true,tabTitle,null);
+        }
+        sforce.console.getEnclosingPrimaryTabId(openSubtabFunction);
+    }
 
-	/*
-		openRecord - open a Salesforce record page specific to the UI:
-			- Salesforce console: a new tab is opened containing the record
-			- Salesforce1 mobile app: the record is navigated to
-			- Aloha UI: the record is opened in a new window (/browser tab)
-		Inputs:
-			- ID recordID - ID of the record to which to navigate
-			- String tabType:
-				- primary - open a new primary tab
-				- sub - open a new subtab (only valid if this page is a sidebar component of a record)
-			- String targetLabel - title of the console tab [should be passed URI encoded] (input null or empty string ('') to accept default label)
-			- String targetAction:
-				- view - open the record for viewing
-				- edit - open the record for editing
-				- close - open the URL with delete rendering where available (console, aloha, NOT Salesforce1)
-				- new - create a new record
-			- String entityName - name of the object (e.g. Task)
-		Returns: none
-	*/
-	function openRecord(recordID, tabType, targetLabel, targetAction, entityName) {
-		// Initial recordID cleanup
-		if (recordID != null) {
-			// Set the default 'URL' to be the recordID
-			var thisURL = '/' + recordID;
+    /*
+        openRecord - open a Salesforce record page specific to the UI:
+            - Salesforce console: a new tab is opened containing the record
+            - Salesforce1 mobile app: the record is navigated to
+            - Aloha UI: the record is opened in a new window (/browser tab)
+        Inputs:
+            - ID recordID - ID of the record to which to navigate
+            - String tabType:
+                - primary - open a new primary tab
+                - sub - open a new subtab
+            - String targetLabel - title of the console tab [should be passed URI encoded] (input null or empty string ('') to accept default label)
+            - String targetAction:
+                - view - open the record for viewing
+                - edit - open the record for editing
+                - close - open the URL with delete rendering where available (console, aloha, NOT Salesforce1)
+                - new - create a new record
+            - String entityName - name of the object (e.g. Task)
+        Returns: none
+    */
+    function openRecord(recordID, tabType, targetLabel, targetAction, entityName) {
+        // Initial recordID cleanup
+        if (recordID != null) {
+            // Set the default 'URL' to be the recordID
+            var thisURL = '/' + recordID;
 
-			// Detect Content which will be displayed instead of Files in the Salesforce console & Aloha UI
-			// 	Note: Content & Files both use 069 IDs.  If entityName = 'Files' (or anything other than 'Content')
-			//		the record will be opened as a File in Aloha and the Console  
-			if (entityName == 'Content' && (recordID.substring(0,3) == '069' || recordID.substring(0,3) == '068')) {
-				thisURL = encodeURI('/sfc/#version/' + recordID);
-			}
-		}
+            // Detect Content which will be displayed instead of Files in the Salesforce console & Aloha UI
+            if (recordID.substring(0,3) == '069') {
+                thisURL = encodeURI('/sfc/#version/' + recordID);
+            }
+        }
 
-		// Initial targetLabel cleanup
-		targetLabel = decodeURI(targetLabel);
+        // Initial targetLabel cleanup
+        targetLabel = decodeURI(targetLabel);
 
-		// Append appropriate modifier based on targetAction
-		if (targetAction == 'close') {
-			// close/edit modifier
-			thisURL += '/e?close=1&cancelURL=%2F' + recordID;
-		} else if (targetAction == 'edit') {
-			// edit modifier
-			thisURL += '/e';
-		} else if (targetAction == 'new') {
-			// new URL (overwrites initialized default)
+        // Append appropriate modifier based on targetAction
+        if (targetAction == 'close') {
+            // close/edit modifier
+            thisURL += '/e?close=1&cancelURL=%2F' + recordID;
+        } else if (targetAction == 'edit') {
+            // edit modifier
+            thisURL += '/e';
+        } else if (targetAction == 'new') {
+            // new URL (overwrites initialized default)
 // !!!! NOTE: need to add the rest of the edit URL shortcuts for all other Objects
-			if (entityName == 'Task') {
-				thisURL = '/00T/e';
-			}
-		}
-		
-		// Determine the UI
-		var pageFormat = getPageFormat();
+            if (entityName == 'Task') {
+                thisURL = '/00T/e';
+            }
+        }
+        
+        // Determine the UI
+        var pageFormat = getPageFormat();
 
-		// Form the appropriate javascript function based on the UI the user is using
-		if (pageFormat == 'console') {
-			// Open the targetURL in a new console tab
-			if (tabType == 'sub') {
-				if(targetLabel == null || targetLabel == '') targetLabel = '';
-				// Open a new sub tab
-				openSubtab(thisURL, targetLabel);
-			} else {
-				// Open a new primary tab
-				// Paramters: id=null (new tab), url=thisURL, active=true, tabLabel=targetLabel, callback=N/A
-				if(targetLabel == null || targetLabel == '') {
-					sforce.console.openPrimaryTab(null, thisURL, true);
-				} else {
-					sforce.console.openPrimaryTab(null, thisURL, true, targetLabel);
-				}
-			}
-		} else if (pageFormat == 'mobile') {
-			if (targetAction == 'edit') {
-				// Open the record for editing in Salesforce1
-				sforce.one.editRecord(recordID);
-			} else if (targetAction == 'new') {
-				// Open the record for editing in Salesforce1
-				sforce.one.createRecord(entityName);
-			} else {
-				// Default (including targetAction == 'view'): open the recordID for viewing in Salesforce1
-				sforce.one.navigateToSObject(recordID);
-			}
-		} else {
-			// Open record using normal browser window.open commands (for the Aloha UI)
-			window.open(thisURL,recordID);
-		}
-	}
+        // Form the appropriate javascript function based on the UI the user is using
+        if (pageFormat == 'console') {
+            // Open the targetURL in a new console tab
+            if (tabType == 'sub') {
+                if(targetLabel == null || targetLabel == '') targetLabel = '';
+                // Open a new sub tab
+                openSubtab(thisURL, targetLabel);
+            } else {
+                // Open a new primary tab
+                // Paramters: id=null (new tab), url=thisURL, active=true, tabLabel=targetLabel, callback=N/A
+                if(targetLabel == null || targetLabel == '') {
+                    sforce.console.openPrimaryTab(null, thisURL, true);
+                } else {
+                    sforce.console.openPrimaryTab(null, thisURL, true, targetLabel);
+                }
+            }
+        } else if (pageFormat == 'mobile') {
+            if (targetAction == 'edit') {
+                // Open the record for editing in Salesforce1
+                sforce.one.editRecord(recordID);
+            } else if (targetAction == 'new') {
+                // Open the record for editing in Salesforce1
+                sforce.one.createRecord(entityName);
+            } else {
+                // Default (including targetAction == 'view'): open the recordID for viewing in Salesforce1
+                sforce.one.navigateToSObject(recordID);
+            }
+        } else {
+            // Open record using normal browser window.open commands (for the Aloha UI)
+            window.open(thisURL,recordID);
+        }
+    }
 </script>
 
+<br /><br />
+<em><script>document.write(getPageFormat());</script> UI detected</em><br />
 <br /><br />
 <b>All of these links will open properly in the Aloha UI, Salesforce console, or Salesforce1:</b><br />
 <br />
@@ -188,4 +185,3 @@ Create a <b>new</b> task.  If the user is viewing from the console, open it in a
 <br />
 
 </apex:page>
-
